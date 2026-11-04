@@ -5,7 +5,7 @@ const connectDB = async () => {
 
   if (!uri) {
     console.error("[DB] MONGODB_URI is not set. Aborting startup.");
-    process.exit(1);
+    throw new Error("MONGODB_URI is not set in environment variables");
   }
 
   try {
@@ -14,9 +14,10 @@ const connectDB = async () => {
     });
     console.log(`[DB] MongoDB connected: ${conn.connection.host}`);
     console.log(`[DB] Database name: ${conn.connection.name}`);
+    return conn;
   } catch (err) {
     console.error("[DB] Connection error:", err.message);
-    process.exit(1);
+    throw err;
   }
 };
 

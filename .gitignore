@@ -42,3 +42,5 @@ coverage/
 # ---------- Misc ----------
 *.tmp
 .cache/
+
+.project-pids.json
