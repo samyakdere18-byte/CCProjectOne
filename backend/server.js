@@ -29,6 +29,14 @@ const devOrigins = [
   "http://127.0.0.1:5174",
 ];
 
+// In production, warn clearly if no FRONTEND_URL is configured
+if (isProduction && envOrigins.length === 0) {
+  console.warn(
+    "[CORS] WARNING: NODE_ENV=production but FRONTEND_URL is not set. " +
+    "All browser requests will be blocked. Set FRONTEND_URL in your hosting environment."
+  );
+}
+
 const allowedOrigins = Array.from(
   new Set([...(envOrigins.length ? envOrigins : ["http://localhost:5173"]), ...(isProduction ? [] : devOrigins)])
 );
