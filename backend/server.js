@@ -15,11 +15,21 @@ const app = express();
 /* ------------------------------------------------------------------ */
 const isProduction = process.env.NODE_ENV === "production";
 
-// Parse configured origins from environment
+// Parse configured origins from environment. URLs in CORS Origin headers never
+// include a trailing slash, so normalize configured URLs to their origin.
+const normalizeOrigin = (value) => {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return value.replace(/\/+$/, "");
+  }
+};
+
 const envOrigins = (process.env.FRONTEND_URL || "")
   .split(",")
   .map((o) => o.trim())
-  .filter(Boolean);
+  .filter(Boolean)
+  .map(normalizeOrigin);
 
 // Development default origins
 const devOrigins = [
@@ -41,12 +51,42 @@ const allowedOrigins = Array.from(
   new Set([...(envOrigins.length ? envOrigins : ["http://localhost:5173"]), ...(isProduction ? [] : devOrigins)])
 );
 
+// Netlify deploy-preview URLs use `<deploy-id>--<site-name>.netlify.app`.
+// Permit previews for a configured Netlify production origin without allowing
+// previews belonging to unrelated Netlify sites.
+const isNetlifyPreviewOrigin = (origin) => {
+  let requestUrl;
+  try {
+    requestUrl = new URL(origin);
+  } catch {
+    return false;
+  }
+
+  if (requestUrl.protocol !== "https:" || requestUrl.origin !== origin) {
+    return false;
+  }
+
+  const netlifySuffix = ".netlify.app";
+  return envOrigins.some((configuredOrigin) => {
+    let configuredHost;
+    try {
+      configuredHost = new URL(configuredOrigin).hostname;
+    } catch {
+      return false;
+    }
+    if (!configuredHost.endsWith(netlifySuffix)) return false;
+
+    const siteName = configuredHost.slice(0, -netlifySuffix.length);
+    return requestUrl.hostname.endsWith(`--${siteName}${netlifySuffix}`);
+  });
+};
+
 const corsOptions = {
   origin: (origin, callback) => {
     // Allow server-to-server, curl, Postman (requests without Origin header)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes(origin)) {
+    if (allowedOrigins.includes(origin) || isNetlifyPreviewOrigin(origin)) {
       return callback(null, true);
     }
 
