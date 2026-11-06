@@ -1,98 +1,56 @@
 # BIT Student Information Management System
 
-A full-stack **Student Information Management System** built on a **Three-Tier Cloud Architecture**. Manage student records with Create, Read, Update, and Delete (CRUD) operations through a modern, responsive web dashboard.
+A React dashboard and Express API for managing student records, backed by MongoDB.
 
----
+## Run locally (Windows)
 
-## Table of Contents
+Requirements: Node.js 18 or newer, npm, and MongoDB locally or a MongoDB Atlas database.
 
-1. [Project Description](#1-project-description)
-2. [Objectives](#2-objectives)
-3. [Three-Tier Architecture](#3-three-tier-architecture)
-4. [Architecture Diagram](#4-architecture-diagram)
-5. [Technology Stack](#5-technology-stack)
-6. [Folder Structure](#6-folder-structure)
-7. [Prerequisites](#7-prerequisites)
-8. [Local Installation](#8-local-installation)
-9. [Environment Variables](#9-environment-variables)
-10. [MongoDB Atlas Setup](#10-mongodb-atlas-setup)
-11. [API Endpoint Documentation](#11-api-endpoint-documentation)
-12. [Render Backend Deployment](#12-render-backend-deployment)
-13. [Netlify Frontend Deployment](#13-netlify-frontend-deployment)
-14. [Testing Procedure](#14-testing-procedure)
-15. [Common Errors and Solutions](#15-common-errors-and-solutions)
-16. [Security Notes](#16-security-notes)
-17. [Author](#17-author)
+1. Copy `backend/.env.example` to `backend/.env` and set `MONGODB_URI` to your database connection string. The default connects to a local MongoDB database named `CCProjectOne`.
+2. From PowerShell at the repository root, run:
 
----
+   ```powershell
+   .\start-project.ps1
+   ```
 
-## 1. Project Description
+3. Open <http://localhost:5173>. The API is at <http://localhost:5000>; its health endpoint is <http://localhost:5000/api/health>.
+4. Stop both services with `.\stop-project.ps1`.
 
-This project demonstrates a **three-tier cloud-native application** that separates concerns across presentation, application logic, and data storage. Each tier is deployed independently and communicates with the others exclusively over well-defined interfaces (HTTPS + REST APIs).
+The startup script installs dependencies when needed. For manual startup, open two terminals: run `npm install` then `npm start` in `backend`; run `npm install` then `npm run dev` in `frontend`. Keep `VITE_API_URL` empty in `frontend/.env` to use the Vite proxy, or set it to `http://localhost:5000` to call the backend directly.
 
-Users interact with a React dashboard to:
-- Add new student records
-- View a searchable, sortable list of all students
-- Edit existing records
-- Delete records with confirmation
-- Receive real-time success/error feedback
+## Deploy
 
-The application is intended as a demonstration of modern full-stack cloud deployment practices, suitable for academic submission.
+### Backend (Render)
 
----
+The root `render.yaml` creates a Node web service rooted at `backend`, starts it with `npm start`, and checks `/api/health`. Set these values in the Render service environment:
 
-## 2. Objectives
+- `MONGODB_URI`: production MongoDB connection string. Add the Render outbound IP policy or allow network access in MongoDB Atlas as appropriate.
+- `FRONTEND_URL`: exact deployed frontend origin, such as `https://your-site.netlify.app` (no path). Multiple origins can be comma-separated.
+- `NODE_ENV=production` is set by the blueprint. Render supplies `PORT`.
 
-- Build a complete CRUD application using a **three-tier architecture**
-- Separate frontend, backend, and database into **independently deployable units**
-- Demonstrate **REST API** design with proper HTTP status codes and JSON contracts
-- Enforce **server-side validation** and centralised error handling
-- Manage secrets via **environment variables** — never hard-coded
-- Deploy to **free-tier cloud platforms**: Netlify (frontend), Render (backend), MongoDB Atlas (database)
-- Practice **Git/GitHub** version control with proper `.gitignore` hygiene
+The server listens on the hosting platform's `PORT`, and refuses to start in production without `MONGODB_URI`.
 
----
+### Frontend (Netlify)
 
-## 3. Three-Tier Architecture
+The root `netlify.toml` builds the `frontend` directory, publishes Vite's `dist` output, and rewrites SPA routes to `index.html`. Set `VITE_API_URL` in Netlify's build environment to the backend origin, for example `https://bit-student-api.onrender.com` (no trailing slash), then trigger a new deploy. Vite embeds this value at build time. If the API is served from the same origin as the frontend, leave it unset and the app uses `/api`.
 
-| Tier | Layer | Technology | Deployment |
-|---|---|---|---|
-| **Tier 1 — Presentation** | User interface running in the browser | React 18 + Vite + Axios | **Netlify** |
-| **Tier 2 — Application** | REST API server and business logic | Node.js + Express 4 + Mongoose | **Render** |
-| **Tier 3 — Data** | Persistent data store | MongoDB Atlas (M0 free cluster) | **MongoDB Cloud** |
+The frontend and backend origins must agree: the Netlify origin belongs in backend `FRONTEND_URL`, and the Render origin belongs in Netlify `VITE_API_URL`.
 
-**Communication rules:**
+## API
 
-- The **frontend never connects directly to MongoDB**. All data access happens through the backend REST API.
-- The **backend is stateless** with respect to sessions — every request carries all needed context.
-- The **database credentials exist only in the backend environment** on Render. They never appear in frontend bundles or GitHub commits.
+All endpoints are prefixed with `/api`:
 
----
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/health` | API and database status |
+| GET | `/students` | List students |
+| GET | `/students/:id` | Read one student |
+| POST | `/students` | Create a student |
+| PUT | `/students/:id` | Update a student |
+| DELETE | `/students/:id` | Delete a student |
 
-## 4. Architecture Diagram
+Student fields: `studentId`, `name`, `email`, `department`, `semester` (1–8), and optional `contact`.
 
-```mermaid
-flowchart LR
-    subgraph Client["User Browser"]
-        U[User]
-    end
+## Environment files
 
-    subgraph Tier1["Tier 1 — Presentation (Netlify)"]
-        FE["React SPA<br/>Vite + Axios<br/>VITE_API_URL"]
-    end
-
-    subgraph Tier2["Tier 2 — Application (Render)"]
-        API["Express REST API<br/>/api/students<br/>Node.js + Mongoose"]
-    end
-
-    subgraph Tier3["Tier 3 — Data (MongoDB Atlas)"]
-        DB[("MongoDB Cluster<br/>database: studentDB<br/>collection: students")]
-    end
-
-    U -->|HTTPS| FE
-    FE -->|"REST / JSON<br/>HTTPS"| API
-    API -->|"MongoDB wire protocol<br/>TLS"| DB
-
-    style Tier1 fill:#e8f0fe,stroke:#1e63d8
-    style Tier2 fill:#dcfce7,stroke:#16a34a
-    style Tier3 fill:#fef3c7,stroke:#d97706
+Use `backend/.env.example` as a template. Real `.env` files are ignored by Git; never commit database credentials. `VITE_API_URL` is public frontend configuration and must contain only the API base URL, never a secret.

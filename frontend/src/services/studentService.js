@@ -2,11 +2,10 @@
 import axios from "axios";
 
 /**
- * Base URL comes from VITE_API_URL.
- * Falls back to localhost ONLY for local dev — never as a production default.
+ * Set VITE_API_URL for a separately hosted API. Otherwise use same-origin /api;
+ * in local development Vite proxies that path to the backend.
  */
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE_URL = (import.meta.env.VITE_API_URL?.trim() || "").replace(/\/$/, "");
 
 const api = axios.create({
   baseURL: `${API_BASE_URL}/api`,

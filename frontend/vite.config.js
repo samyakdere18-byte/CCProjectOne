@@ -9,6 +9,12 @@ export default defineConfig({
     strictPort: true, // Fail rather than silently switching to 5174
     host: "0.0.0.0",  // Listen on both IPv4 (127.0.0.1) and IPv6 (localhost)
     open: false,
+    proxy: {
+      "/api": {
+        target: process.env.VITE_API_PROXY_TARGET || "http://localhost:5000",
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     outDir: "dist",

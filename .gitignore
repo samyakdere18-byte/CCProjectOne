@@ -44,3 +44,11 @@ coverage/
 .cache/
 
 .project-pids.json
+# ---------- Environment files (NEVER commit real secrets) ----------
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+**/.env.*.local
+**/.env.backup

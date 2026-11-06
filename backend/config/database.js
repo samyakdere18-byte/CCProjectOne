@@ -1,11 +1,14 @@
 const mongoose = require("mongoose");
 
 const connectDB = async () => {
-  const uri = process.env.MONGODB_URI;
+  const uri = process.env.MONGODB_URI ||
+    (process.env.NODE_ENV !== "production"
+      ? "mongodb://127.0.0.1:27017/CCProjectOne"
+      : "");
 
   if (!uri) {
     console.error("[DB] MONGODB_URI is not set. Aborting startup.");
-    throw new Error("MONGODB_URI is not set in environment variables");
+    throw new Error("Set MONGODB_URI in production environment variables");
   }
 
   try {

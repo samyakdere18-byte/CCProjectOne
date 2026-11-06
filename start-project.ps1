@@ -53,23 +53,17 @@ Write-Host "[3/6] Checking environment configuration..." -ForegroundColor Yellow
 $backendEnv = Join-Path $BackendDir ".env"
 $frontendEnv = Join-Path $FrontendDir ".env"
 
-if (-not (Test-Path $backendEnv)) {
-    Write-Host "  [FAIL] Missing backend/.env file." -ForegroundColor Red
-    exit 1
+if (Test-Path $backendEnv) {
+    Write-Host "  [OK] backend/.env found" -ForegroundColor Green
+} else {
+    Write-Host "  [INFO] No backend/.env; using local MongoDB at 127.0.0.1:27017" -ForegroundColor Gray
 }
-
-$backendEnvContent = Get-Content $backendEnv -Raw
-if ($backendEnvContent -notmatch "MONGODB_URI\s*=\s*\S+") {
-    Write-Host "  [FAIL] backend/.env does not define MONGODB_URI." -ForegroundColor Red
-    exit 1
-}
-Write-Host "  [OK] backend/.env verified (MongoDB Atlas URI configured securely)" -ForegroundColor Green
 
 if (-not (Test-Path $frontendEnv)) {
     Write-Host "  Creating frontend/.env..." -ForegroundColor Gray
-    "VITE_API_URL=http://localhost:5000" | Out-File -FilePath $frontendEnv -Encoding utf8
+    "VITE_API_URL=" | Out-File -FilePath $frontendEnv -Encoding utf8
 }
-Write-Host "  [OK] frontend/.env verified (VITE_API_URL=http://localhost:5000)" -ForegroundColor Green
+Write-Host "  [OK] frontend/.env verified (local API proxy enabled)" -ForegroundColor Green
 
 # Helper: safe port check and cleanup
 function Clean-PortIfOwnedByProject([int]$targetPort, [string]$label) {
